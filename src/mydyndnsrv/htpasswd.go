@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"hash"
+	"log"
 	"os"
 	"regexp"
 )
@@ -41,6 +42,7 @@ func NewHtpasswdFile(fn string) (*HtpasswdFile, error) {
 		ht.users[entry[0]] = entry[1]
 	}
 
+	log.Printf("Loaded %d users\n", len(ht.users))
 	return ht, nil
 }
 

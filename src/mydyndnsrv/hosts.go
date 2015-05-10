@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"log"
 	"os"
 	"strings"
 )
@@ -35,6 +36,7 @@ func NewHostsFile(fn string) (*HostsFile, error) {
 		h.hosts[entry[0]] = strings.Split(entry[1], ",")
 	}
 
+	log.Printf("Loaded %d hosts\n", len(h.hosts))
 	return h, nil
 }
 
