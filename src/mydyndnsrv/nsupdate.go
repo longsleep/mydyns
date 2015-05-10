@@ -18,7 +18,7 @@ type nsUpdateData struct {
 	ip       *net.IP
 }
 
-type nsUpdate struct {
+type NsUpdate struct {
 	exe     string
 	server  string
 	keyfile string
@@ -29,8 +29,8 @@ type nsUpdate struct {
 	timer   chan bool
 }
 
-func newNsUpdate(exe, server, keyfile, zone string, ttl int) *nsUpdate {
-	return &nsUpdate{
+func NewNsUpdate(exe, server, keyfile, zone string, ttl int) *NsUpdate {
+	return &NsUpdate{
 		exe:     exe,
 		server:  server,
 		keyfile: keyfile,
@@ -41,7 +41,7 @@ func newNsUpdate(exe, server, keyfile, zone string, ttl int) *nsUpdate {
 	}
 }
 
-func (update *nsUpdate) run() {
+func (update *NsUpdate) run() {
 	work := make(map[string]*net.IP)
 	var err error
 	c := time.Tick(5 * time.Second)
@@ -75,7 +75,7 @@ func (update *nsUpdate) run() {
 	}
 }
 
-func (update *nsUpdate) process(work map[string]*net.IP) error {
+func (update *NsUpdate) process(work map[string]*net.IP) error {
 
 	f, err := ioutil.TempFile(os.TempDir(), "mydyndnsrv")
 	if err != nil {
@@ -117,7 +117,7 @@ func (update *nsUpdate) process(work map[string]*net.IP) error {
 
 }
 
-func (update *nsUpdate) update(data *nsUpdateData) error {
+func (update *NsUpdate) update(data *nsUpdateData) error {
 	// Send non blocking.
 	select {
 	case update.queue <- data:

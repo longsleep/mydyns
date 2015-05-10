@@ -20,7 +20,8 @@ var (
 	_, IPv6private, _  = net.ParseCIDR("fd00::/8")
 )
 
-var update *nsUpdate
+var update *NsUpdate
+var users *HtpasswdFile
 
 // TokenData defines the data to encode into tokens.
 type TokenData struct {
@@ -43,11 +44,12 @@ func main() {
 
 	// Parse command line.
 	var (
-		nsupdate = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
-		server   = kingpin.Flag("server", "DNS server hostname.").Required().String()
-		keyfile  = kingpin.Flag("keyfile", "Shared secrets file.").Required().ExistingFile()
-		zone     = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
-		ttl      = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
+		nsupdate  = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
+		server    = kingpin.Flag("server", "DNS server hostname.").Required().String()
+		keyfile   = kingpin.Flag("keyfile", "Shared secrets file.").Required().ExistingFile()
+		zone      = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
+		ttl       = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
+		usersfile = kingpin.Flag("users", "Htpasswd users database.").Required().ExistingFile()
 	)
 
 	kingpin.CommandLine.Help = "Run your own dynamic DNS zone."
@@ -56,7 +58,8 @@ func main() {
 
 	// Initialize.
 	tokens = securecookie.New([]byte("very-secret"), nil)
-	update = newNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
+	update = NewNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
+	users, _ = NewHtpasswdFile(*usersfile)
 
 	// Create URL routing.
 	mux := http.NewServeMux()
@@ -118,7 +121,16 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 // tokenHandler creates tokens for a given hostname.
 func tokenHandler(w http.ResponseWriter, r *http.Request) {
 
-	// TODO(longsleep): Add basic auth support.
+	// Basic auth is required.
+	if username, password, ok := getBasicAuth(r); ok {
+		if !users.CheckPassword(username, password) {
+			http.Error(w, "authentication failed", http.StatusForbidden)
+			return
+		}
+	} else {
+		http.Error(w, "basic auth required", http.StatusForbidden)
+		return
+	}
 
 	r.ParseForm()
 	hostname := r.Form.Get("hostname")
@@ -145,7 +157,7 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		Hostname: hostname,
 	}
 	if token, err := tokens.Encode("u", data); err == nil {
-		log.Println("Token created", hostname)
+		//log.Println("Token created", hostname)
 		fmt.Fprintln(w, token)
 	} else {
 		log.Println("Error while creating token", err)
