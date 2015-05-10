@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/securecookie"
+	"gopkg.in/alecthomas/kingpin.v1"
 	"log"
 	"net"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"strings"
 )
 
+var version = "0.0.1"
 var tokens *securecookie.SecureCookie
 var (
 	_, IPv4privateA, _ = net.ParseCIDR("10.0.0.0/8")
@@ -39,9 +41,22 @@ func isPrivateNetwork(ip net.IP) bool {
 // main is our blocking runner.
 func main() {
 
+	// Parse command line.
+	var (
+		nsupdate = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
+		server   = kingpin.Flag("server", "DNS server hostname.").Required().String()
+		keyfile  = kingpin.Flag("keyfile", "Shared secrets file.").Required().ExistingFile()
+		zone     = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
+		ttl      = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
+	)
+
+	kingpin.CommandLine.Help = "Run your own dynamic DNS zone."
+	kingpin.Version(version)
+	kingpin.Parse()
+
 	// Initialize.
 	tokens = securecookie.New([]byte("very-secret"), nil)
-	update = newNsUpdate("path/to/nsupdate", "ns1.example.com", "/path/to/key.asc", "dyn.example.com", 300)
+	update = newNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
 
 	// Create URL routing.
 	mux := http.NewServeMux()

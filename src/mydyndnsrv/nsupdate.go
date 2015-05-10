@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"time"
-	"bytes"
 )
 
 type nsUpdateData struct {
@@ -90,10 +90,10 @@ func (update *nsUpdate) process(work map[string]*net.IP) error {
 
 	var recordtype string
 	for hostname, ip := range work {
-		if ip.To4() == nil {
-			recordtype = "AAAA"
-		} else {
+		if ip.To4() != nil {
 			recordtype = "A"
+		} else {
+			recordtype = "AAAA"
 		}
 		w.WriteString(fmt.Sprintf("update delete %s %s\n", hostname, recordtype))
 		w.WriteString(fmt.Sprintf("update add %s %d %s %s\n", hostname, update.ttl, recordtype, ip))
