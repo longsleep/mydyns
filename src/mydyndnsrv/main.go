@@ -2,17 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorilla/securecookie"
 	"gopkg.in/alecthomas/kingpin.v1"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 var version = "0.0.1"
-var tokens *securecookie.SecureCookie
 var (
 	_, IPv4privateA, _ = net.ParseCIDR("10.0.0.0/8")
 	_, IPv4privateB, _ = net.ParseCIDR("172.16.0.0/12")
@@ -23,6 +22,7 @@ var (
 var update *NsUpdate
 var users *HtpasswdFile
 var hosts *HostsFile
+var secret *SecretFile
 
 // TokenData defines the data to encode into tokens.
 type TokenData struct {
@@ -46,24 +46,28 @@ func main() {
 
 	// Parse command line.
 	var (
-		nsupdate  = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
-		server    = kingpin.Flag("server", "DNS server hostname.").Required().String()
-		keyfile   = kingpin.Flag("keyfile", "Shared secrets file.").Required().ExistingFile()
-		zone      = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
-		ttl       = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
-		usersfile = kingpin.Flag("users", "Htpasswd users database.").Required().ExistingFile()
-		hostsfile = kingpin.Flag("hosts", "Hosts database.").Required().ExistingFile()
+		listen     = kingpin.Flag("listen", "Listen address.").PlaceHolder("IP:PORT").Default("127.0.0.1:8080").String()
+		nsupdate   = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
+		server     = kingpin.Flag("server", "DNS server hostname.").Required().String()
+		keyfile    = kingpin.Flag("key", "DNS shared secrets file.").Required().PlaceHolder("KEYFILE").ExistingFile()
+		zone       = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
+		ttl        = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
+		usersfile  = kingpin.Flag("users", "Htpasswd users database.").Required().PlaceHolder("USERSFILE").ExistingFile()
+		hostsfile  = kingpin.Flag("hosts", "Hosts database.").Required().PlaceHolder("HOSTSFILE").ExistingFile()
+		secretfile = kingpin.Flag("secret", "Auth token secret file.").Required().ExistingFile()
 	)
 
-	kingpin.CommandLine.Help = "Run your own dynamic DNS zone."
+	kingpin.CommandLine.Help = "Manage your own dynamic DNS zone."
 	kingpin.Version(version)
 	kingpin.Parse()
 
+	log.Printf("Starting up on: %s\n", *listen)
+
 	// Initialize.
-	tokens = securecookie.New([]byte("very-secret"), nil)
 	update = NewNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
 	users, _ = NewHtpasswdFile(*usersfile)
 	hosts, _ = NewHostsFile(*hostsfile)
+	secret, _ = NewSecretFile(*secretfile)
 
 	// Create URL routing.
 	mux := http.NewServeMux()
@@ -74,7 +78,14 @@ func main() {
 	go update.run()
 
 	// Start HTTP service.
-	http.ListenAndServe(":8081", mux)
+	s := &http.Server{
+		Addr:           *listen,
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	log.Fatal(s.ListenAndServe())
 
 }
 
@@ -91,7 +102,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var data TokenData
-	if err := tokens.Decode("u", token, &data); err != nil {
+	if err := secret.Decode("u", token, &data); err != nil {
 		http.Error(w, fmt.Sprintf("invalid token: %s", err), http.StatusForbidden)
 		return
 	}
@@ -174,7 +185,7 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		Host: hostname,
 		User: username,
 	}
-	if token, err := tokens.Encode("u", data); err == nil {
+	if token, err := secret.Encode("u", data); err == nil {
 		//log.Println("Token created", hostname)
 		fmt.Fprintln(w, token)
 	} else {

@@ -2,3 +2,4 @@ bin/
 vendor/
 users.db
 hosts.db
+secret.dat
