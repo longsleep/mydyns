@@ -95,8 +95,8 @@ func (update *NsUpdate) process(work map[string]*net.IP) error {
 		} else {
 			recordtype = "AAAA"
 		}
-		w.WriteString(fmt.Sprintf("update delete %s %s\n", hostname, recordtype))
-		w.WriteString(fmt.Sprintf("update add %s %d %s %s\n", hostname, update.ttl, recordtype, ip))
+		w.WriteString(fmt.Sprintf("update delete %s.%s. %s\n", hostname, update.zone, recordtype))
+		w.WriteString(fmt.Sprintf("update add %s.%s. %d %s %s\n", hostname, update.zone, update.ttl, recordtype, ip))
 	}
 
 	w.WriteString("send\n")
