@@ -43,6 +43,7 @@ func newNsUpdate(exe, server, keyfile, zone string, ttl int) *nsUpdate {
 
 func (update *nsUpdate) run() {
 	work := make(map[string]*net.IP)
+	var err error
 	c := time.Tick(5 * time.Second)
 	for {
 		select {
@@ -60,8 +61,13 @@ func (update *nsUpdate) run() {
 			}
 			if len(work) > 0 {
 				// Do some work.
-				update.process(work)
-				work = make(map[string]*net.IP)
+				err = update.process(work)
+				if err != nil {
+					// Error.
+					log.Println("Update failed", err)
+				} else {
+					work = make(map[string]*net.IP)
+				}
 			}
 		case <-update.exit:
 			return
@@ -69,12 +75,11 @@ func (update *nsUpdate) run() {
 	}
 }
 
-func (update *nsUpdate) process(work map[string]*net.IP) {
+func (update *nsUpdate) process(work map[string]*net.IP) error {
 
 	f, err := ioutil.TempFile(os.TempDir(), "mydyndnsrv")
 	if err != nil {
-		log.Println("Failed to create update file", err)
-		return
+		return err
 	}
 	log.Printf("Processing %d updates in %s", len(work), f.Name())
 	defer os.Remove(f.Name())
@@ -105,10 +110,10 @@ func (update *nsUpdate) process(work map[string]*net.IP) {
 	cmd.Stdout = &out
 	err = cmd.Run()
 	if err != nil {
-		log.Println("Failed to process update", f.Name(), err)
-	} else {
-		log.Println("Completed update", f.Name())
+		return err
 	}
+	log.Println("Completed update", f.Name())
+	return nil
 
 }
 
