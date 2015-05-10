@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/securecookie"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,6 +17,8 @@ var (
 	_, IPv4privateC, _ = net.ParseCIDR("192.168.0.0/16")
 	_, IPv6private, _  = net.ParseCIDR("fd00::/8")
 )
+
+var update *nsUpdate
 
 // TokenData defines the data to encode into tokens.
 type TokenData struct {
@@ -36,15 +39,19 @@ func isPrivateNetwork(ip net.IP) bool {
 // main is our blocking runner.
 func main() {
 
-	// Initialize tokens.
+	// Initialize.
 	tokens = securecookie.New([]byte("very-secret"), nil)
+	update = newNsUpdate("path/to/nsupdate", "ns1.example.com", "/path/to/key.asc", "dyn.example.com", 300)
 
 	// Create URL routing.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update", updateHandler)
 	mux.HandleFunc("/token", tokenHandler)
 
-	// This blocks.
+	// Start our worker.
+	go update.run()
+
+	// Start HTTP service.
 	http.ListenAndServe(":8081", mux)
 
 }
@@ -81,7 +88,15 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "Hello, %s, %s\n", data.Hostname, myip)
+	// Queue changes.
+	if err := update.update(&nsUpdateData{data.Hostname, &ip}); err != nil {
+		log.Println("Update failed", err)
+		http.Error(w, fmt.Sprintf("update failed: %s", err), http.StatusTeapot)
+	} else {
+		log.Println("Queued update", data.Hostname, ip)
+	}
+
+	fmt.Fprintf(w, "accepted\n")
 
 }
 
@@ -115,8 +130,10 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		Hostname: hostname,
 	}
 	if token, err := tokens.Encode("u", data); err == nil {
+		log.Println("Token created", hostname)
 		fmt.Fprintln(w, token)
 	} else {
+		log.Println("Error while creating token", err)
 		http.Error(w, fmt.Sprintf("failed to create token: %s", err), http.StatusInternalServerError)
 	}
 

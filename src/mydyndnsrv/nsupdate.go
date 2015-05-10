@@ -1,0 +1,123 @@
+package main
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"os/exec"
+	"time"
+	"bytes"
+)
+
+type nsUpdateData struct {
+	hostname string
+	ip       *net.IP
+}
+
+type nsUpdate struct {
+	exe     string
+	server  string
+	keyfile string
+	zone    string
+	ttl     int
+	queue   chan *nsUpdateData
+	exit    chan bool
+	timer   chan bool
+}
+
+func newNsUpdate(exe, server, keyfile, zone string, ttl int) *nsUpdate {
+	return &nsUpdate{
+		exe:     exe,
+		server:  server,
+		keyfile: keyfile,
+		zone:    zone,
+		ttl:     ttl,
+		queue:   make(chan *nsUpdateData, 100),
+		exit:    make(chan bool),
+	}
+}
+
+func (update *nsUpdate) run() {
+	work := make(map[string]*net.IP)
+	c := time.Tick(5 * time.Second)
+	for {
+		select {
+		case <-c:
+		Work:
+			for {
+				select {
+				case data := <-update.queue:
+					log.Println("Processing update", data.hostname, data.ip)
+					work[data.hostname] = data.ip
+				default:
+					// No data available. Non blocking.
+					break Work
+				}
+			}
+			if len(work) > 0 {
+				// Do some work.
+				update.process(work)
+				work = make(map[string]*net.IP)
+			}
+		case <-update.exit:
+			return
+		}
+	}
+}
+
+func (update *nsUpdate) process(work map[string]*net.IP) {
+
+	f, err := ioutil.TempFile(os.TempDir(), "mydyndnsrv")
+	if err != nil {
+		log.Println("Failed to create update file", err)
+		return
+	}
+	log.Printf("Processing %d updates in %s", len(work), f.Name())
+	defer os.Remove(f.Name())
+	w := bufio.NewWriter(f)
+
+	w.WriteString(fmt.Sprintf("server %s\n", update.server))
+	w.WriteString(fmt.Sprintf("zone %s\n", update.zone))
+
+	var recordtype string
+	for hostname, ip := range work {
+		if ip.To4() == nil {
+			recordtype = "AAAA"
+		} else {
+			recordtype = "A"
+		}
+		w.WriteString(fmt.Sprintf("update delete %s %s\n", hostname, recordtype))
+		w.WriteString(fmt.Sprintf("update add %s %d %s %s\n", hostname, update.ttl, recordtype, ip))
+	}
+
+	w.WriteString("send\n")
+
+	w.Flush()
+	f.Close()
+
+	// Run command.
+	cmd := exec.Command(update.exe, "-k", update.keyfile, f.Name())
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err = cmd.Run()
+	if err != nil {
+		log.Println("Failed to process update", f.Name(), err)
+	} else {
+		log.Println("Completed update", f.Name())
+	}
+
+}
+
+func (update *nsUpdate) update(data *nsUpdateData) error {
+	// Send non blocking.
+	select {
+	case update.queue <- data:
+		return nil
+	default:
+		return errors.New("update queue full")
+	}
+}
