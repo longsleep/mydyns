@@ -22,10 +22,12 @@ var (
 
 var update *NsUpdate
 var users *HtpasswdFile
+var hosts *HostsFile
 
 // TokenData defines the data to encode into tokens.
 type TokenData struct {
-	Hostname string
+	Host string
+	User string
 }
 
 // isPrivateNetwork checks if an IP address is inside a private network.
@@ -50,6 +52,7 @@ func main() {
 		zone      = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
 		ttl       = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
 		usersfile = kingpin.Flag("users", "Htpasswd users database.").Required().ExistingFile()
+		hostsfile = kingpin.Flag("hosts", "Hosts database.").Required().ExistingFile()
 	)
 
 	kingpin.CommandLine.Help = "Run your own dynamic DNS zone."
@@ -60,6 +63,7 @@ func main() {
 	tokens = securecookie.New([]byte("very-secret"), nil)
 	update = NewNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
 	users, _ = NewHtpasswdFile(*usersfile)
+	hosts, _ = NewHostsFile(*hostsfile)
 
 	// Create URL routing.
 	mux := http.NewServeMux()
@@ -92,6 +96,12 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate hostname access in users database.
+	if !hosts.CheckUser(data.Host, data.User) {
+		http.Error(w, "access denied", http.StatusForbidden)
+		return
+	}
+
 	// Get IP.
 	if myip == "" || myip == "auto" {
 		myip = strings.SplitN(r.RemoteAddr, ":", 2)[0]
@@ -107,11 +117,11 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Queue changes.
-	if err := update.update(&nsUpdateData{data.Hostname, &ip}); err != nil {
+	if err := update.update(&nsUpdateData{data.Host, &ip}); err != nil {
 		log.Println("Update failed", err)
 		http.Error(w, fmt.Sprintf("update failed: %s", err), http.StatusTeapot)
 	} else {
-		log.Println("Queued update", data.Hostname, ip)
+		log.Println("Queued update", data.Host, ip)
 	}
 
 	fmt.Fprintf(w, "accepted\n")
@@ -122,7 +132,8 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 func tokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Basic auth is required.
-	if username, password, ok := getBasicAuth(r); ok {
+	username, password, ok := getBasicAuth(r)
+	if ok {
 		if !users.CheckPassword(username, password) {
 			http.Error(w, "authentication failed", http.StatusForbidden)
 			return
@@ -152,9 +163,16 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Validate hostname access in users database.
+	if !hosts.CheckUser(hostname, username) {
+		http.Error(w, "access denied", http.StatusForbidden)
+		return
+	}
+
 	// Prepare and encode token.
 	data := &TokenData{
-		Hostname: hostname,
+		Host: hostname,
+		User: username,
 	}
 	if token, err := tokens.Encode("u", data); err == nil {
 		//log.Println("Token created", hostname)
