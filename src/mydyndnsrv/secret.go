@@ -15,7 +15,7 @@ func NewSecretFile(fn string) (*SecretFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(secret) != 32 || len(secret) != 64 {
+	if len(secret) != 32 && len(secret) != 64 {
 		log.Printf("Warning: secret size should be 32 or 64 bytes but is %d bytes\n", len(secret))
 	}
 	return &SecretFile{
