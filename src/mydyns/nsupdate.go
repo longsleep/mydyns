@@ -77,7 +77,7 @@ func (update *NsUpdate) run() {
 
 func (update *NsUpdate) process(work map[string]*net.IP) error {
 
-	f, err := ioutil.TempFile(os.TempDir(), "mydyndnsrv")
+	f, err := ioutil.TempFile(os.TempDir(), "mydyns")
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,6 @@
 
-PKG := mydyndnsrv
-EXENAME := mydyndnsrv
+PKG := mydyns
+EXENAME := mydynsd
 
 GOPATH = "$(CURDIR)/vendor:$(CURDIR)"
 SYSTEM_GOPATH := /usr/share/gocode/src/
