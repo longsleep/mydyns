@@ -137,6 +137,11 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := r.Form["check"]; ok {
+		fmt.Fprintf(w, fmt.Sprintf("%s\n", ip))
+		return
+	}
+
 	// Queue changes.
 	if err := update.update(&nsUpdateData{data.Host, &ip}); err != nil {
 		log.Println("Update failed", err)
