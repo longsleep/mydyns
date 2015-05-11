@@ -114,11 +114,21 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get IP.
+	var ip net.IP
 	if myip == "" || myip == "auto" {
 		myip = strings.SplitN(r.RemoteAddr, ":", 2)[0]
+		ip = net.ParseIP(myip)
+		if ip.IsLoopback() {
+			// Running through a proxy?
+			myip = r.Header.Get("X-Real-IP")
+			if myip != "" {
+				ip = net.ParseIP(myip)
+			}
+		}
+	} else {
+		ip = net.ParseIP(myip)
 	}
 	// Validate IP.
-	ip := net.ParseIP(myip)
 	if ip == nil || !ip.IsGlobalUnicast() {
 		http.Error(w, "invalid ip", http.StatusBadRequest)
 		return
@@ -186,7 +196,7 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		User: username,
 	}
 	if token, err := secret.Encode("u", data); err == nil {
-		//log.Println("Token created", hostname)
+		log.Println("Token created by", username, hostname)
 		fmt.Fprintln(w, token)
 	} else {
 		log.Println("Error while creating token", err)
