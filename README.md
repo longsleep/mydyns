@@ -64,7 +64,7 @@ key is passed as file on `mydynsd` startup via the `--secret` parameter.
 
 ```bash
 $ ./mydynsd \
-	-server=your.name.server \
+	--server=your.name.server \
 	--key=dnssec.key.private \
 	--zone=your.dns.zone \
 	--users=users.db \
