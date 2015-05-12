@@ -58,7 +58,7 @@ to your DNS zone, and use the private key file when starting `mydynsd`.
 Mydyns usess token to authenticate update requests for hosts. The token
 contains the user created the token and the host the token should update. To
 ensure that the token cannot be modified, it is digitaly signed. The signing
-key is passed as file on `mydynsd` startup via the --secret parameter.
+key is passed as file on `mydynsd` startup via the `--secret` parameter.
 
 ## Startup
 
@@ -78,7 +78,7 @@ $ ./mydynsd \
 
 The server provides HTTP API endpoints.
 
-### Generate token
+### Token
 
 First one is /token which is used to generate a update token for a host. The
 /token end point requires HTTP Basic authentication which provides the user
@@ -88,7 +88,7 @@ and password. When successfull the token is returned.
 $ curl -u user:password https://yourserver/token?hostname=myhost
 ```
 
-### Update IP address
+### Update
 
 To send an update request use /update end point with the `token` parameter.
 When no further parameters are passed, it will set the IP address where the
@@ -100,6 +100,9 @@ without changing anything, pass the `check` parameter.
 ```bash
 $ curl https://yourserver/update?token=tokenvalue
 ```
+
+There is a update script example in the `scripts` directory which you can
+use to run from cron or similar.
 
 --
 Simon Eisenmann - mailto:simon@longsleep.org
