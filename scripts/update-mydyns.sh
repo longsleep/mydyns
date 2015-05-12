@@ -3,7 +3,7 @@
 # Simple updater script for mydyns running on your own server. Change the
 # HOST variable below to point to your server. Tokens go as first argument
 # when calling this script.
-HOST="dns.orr.pw"
+HOST="your.host"
 
 # Token is passed as first argument.
 TOKEN="$1"
