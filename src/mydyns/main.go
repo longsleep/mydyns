@@ -118,6 +118,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	token := r.Form.Get("token")
 	myip := r.Form.Get("myip")
+	address := r.Form.Get("address")
 
 	// Validate token.
 	if token == "" {
@@ -140,6 +141,12 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	if !hosts.CheckUser(data.Host, data.User) {
 		http.Error(w, "access denied", http.StatusForbidden)
 		return
+	}
+
+	// Join parameters.
+	if address != "" {
+		// For compatibility reasons we also support the address parameter.
+		myip = address
 	}
 
 	// Get IP.

@@ -109,8 +109,8 @@ To send an update request use /update end point with the `token` parameter.
 When no further parameters are passed, it will set the IP address where the
 request came from for the hostname encoded in the token. You can also pass
 the IP address manually with the `myip` parameter. For compatibility reasons
-the `myip=auto` parameter is also supported. To only return the current IP
-without changing anything, pass the `check` parameter.
+the value `auto` and the `address` parameter are also supported. To only
+return the current IP without changing anything, pass the `check` parameter.
 
 ```bash
 $ curl https://yourserver/update?token=tokenvalue
