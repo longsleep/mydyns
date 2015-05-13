@@ -42,11 +42,13 @@ var update *NsUpdate
 var users *HtpasswdFile
 var hosts *HostsFile
 var secret *SecretFile
+var security *SecurityFile
 
 // TokenData defines the data to encode into tokens.
 type TokenData struct {
-	Host string
-	User string
+	Host     string
+	User     string
+	Security []byte
 }
 
 // isPrivateNetwork checks if an IP address is inside a private network.
@@ -65,15 +67,16 @@ func main() {
 
 	// Parse command line.
 	var (
-		listen     = kingpin.Flag("listen", "Listen address.").PlaceHolder("IP:PORT").Default("127.0.0.1:8080").String()
-		nsupdate   = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
-		server     = kingpin.Flag("server", "DNS server hostname.").Required().String()
-		keyfile    = kingpin.Flag("key", "DNS shared secrets file.").Required().PlaceHolder("KEYFILE").ExistingFile()
-		zone       = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
-		ttl        = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
-		usersfile  = kingpin.Flag("users", "Htpasswd users database.").Required().PlaceHolder("USERSFILE").ExistingFile()
-		hostsfile  = kingpin.Flag("hosts", "Hosts database.").Required().PlaceHolder("HOSTSFILE").ExistingFile()
-		secretfile = kingpin.Flag("secret", "Auth token secret file.").Required().ExistingFile()
+		listen       = kingpin.Flag("listen", "Listen address.").PlaceHolder("IP:PORT").Default("127.0.0.1:8080").String()
+		nsupdate     = kingpin.Flag("nsupdate", "Path to nsupdate binary.").Default("/usr/bin/nsupdate").ExistingFile()
+		server       = kingpin.Flag("server", "DNS server hostname.").Required().String()
+		keyfile      = kingpin.Flag("key", "DNS shared secrets file.").Required().PlaceHolder("KEYFILE").ExistingFile()
+		zone         = kingpin.Flag("zone", "Zone where updates should be made.").Required().String()
+		ttl          = kingpin.Flag("ttl", "Ttl for DNS entries.").Default("300").Int()
+		usersfile    = kingpin.Flag("users", "Htpasswd users database.").Required().PlaceHolder("USERSFILE").ExistingFile()
+		hostsfile    = kingpin.Flag("hosts", "Hosts database.").Required().PlaceHolder("HOSTSFILE").ExistingFile()
+		secretfile   = kingpin.Flag("secret", "Auth token secret file.").Required().ExistingFile()
+		securityfile = kingpin.Flag("security", "Security secret database.").Required().ExistingFile()
 	)
 
 	kingpin.CommandLine.Help = "Manage your own dynamic DNS zone."
@@ -87,6 +90,7 @@ func main() {
 	users, _ = NewHtpasswdFile(*usersfile)
 	hosts, _ = NewHostsFile(*hostsfile)
 	secret, _ = NewSecretFile(*secretfile)
+	security, _ = NewSecurityFile(*securityfile)
 
 	// Create URL routing.
 	mux := http.NewServeMux()
@@ -123,6 +127,12 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	var data TokenData
 	if err := secret.Decode("u", token, &data); err != nil {
 		http.Error(w, fmt.Sprintf("invalid token: %s", err), http.StatusForbidden)
+		return
+	}
+
+	// Validate security entry.
+	if !security.Check(data.Security, data.User) {
+		http.Error(w, "invalid security code", http.StatusForbidden)
 		return
 	}
 
@@ -216,8 +226,9 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare and encode token.
 	data := &TokenData{
-		Host: hostname,
-		User: username,
+		Host:     hostname,
+		User:     username,
+		Security: security.Secret(username),
 	}
 	if token, err := secret.Encode("u", data); err == nil {
 		log.Println("Token created by", username, hostname)

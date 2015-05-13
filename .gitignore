@@ -1,5 +1,4 @@
 bin/
 vendor/
-users.db
-hosts.db
+*.db
 secret.dat
