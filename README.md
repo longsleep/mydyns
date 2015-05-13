@@ -39,6 +39,20 @@ somehost:usera,userb
 otherhost:userc
 ```
 
+### Security database security.db
+
+The security database is a simple text file listing one user with the current
+security code for this user. The entry is optional. The security code can
+be used to expire all existing tokens for this user. Tokens must always have
+the current security code, else they are not valid and useless. Change or set
+the security code, if a token becomes stolen. All tokens of a single user use
+the same security code.
+
+```
+usera:current security code
+userb:supercode
+```
+
 ## DNS configuration and key
 
 Mydyns sends updates to a upstream Bind DNS server using `nsupdate` utility to
@@ -69,6 +83,7 @@ $ ./mydynsd \
 	--zone=your.dns.zone \
 	--users=users.db \
 	--hosts=hosts.db \
+	--security=security.db \
 	--secret=secret.dat \
 	--listen=127.0.0.1:8040 \
 	--ttl=60
