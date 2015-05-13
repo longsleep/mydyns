@@ -26,7 +26,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -39,9 +43,11 @@ var (
 )
 
 var update *NsUpdate
+var secret *SecretFile
+
+var dblock sync.RWMutex
 var users *HtpasswdFile
 var hosts *HostsFile
-var secret *SecretFile
 var security *SecurityFile
 
 // TokenData defines the data to encode into tokens.
@@ -87,10 +93,17 @@ func main() {
 
 	// Initialize.
 	update = NewNsUpdate(*nsupdate, *server, *keyfile, *zone, *ttl)
-	users, _ = NewHtpasswdFile(*usersfile)
-	hosts, _ = NewHostsFile(*hostsfile)
 	secret, _ = NewSecretFile(*secretfile)
-	security, _ = NewSecurityFile(*securityfile)
+
+	// Load databases.
+	dbLoader := func() {
+		dblock.Lock()
+		defer dblock.Unlock()
+		users, _ = NewHtpasswdFile(*usersfile)
+		hosts, _ = NewHostsFile(*hostsfile)
+		security, _ = NewSecurityFile(*securityfile)
+	}
+	dbLoader()
 
 	// Create URL routing.
 	mux := http.NewServeMux()
@@ -99,6 +112,18 @@ func main() {
 
 	// Start our worker.
 	go update.run()
+
+	// Create reload listener.
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, syscall.SIGUSR1)
+	go func() {
+		for {
+			// Block for signal.
+			<-sigc
+			log.Println("Reloading databases ...")
+			dbLoader()
+		}
+	}()
 
 	// Start HTTP service.
 	s := &http.Server{
@@ -131,17 +156,25 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Read lock so we hold, when we are currently reloading things.
+	dblock.RLock()
+
 	// Validate security entry.
 	if !security.Check(data.Security, data.User) {
 		http.Error(w, "invalid security code", http.StatusForbidden)
+		dblock.RUnlock()
 		return
 	}
 
 	// Validate hostname access in users database.
 	if !hosts.CheckUser(data.Host, data.User) {
 		http.Error(w, "access denied", http.StatusForbidden)
+		dblock.RUnlock()
 		return
 	}
+
+	// Unlock after checks done.
+	defer dblock.RUnlock()
 
 	// Join parameters.
 	if address != "" {
@@ -196,8 +229,11 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 	// Basic auth is required.
 	username, password, ok := getBasicAuth(r)
 	if ok {
+		// Read lock so we hold, when we are currently reloading things.
+		dblock.RLock()
 		if !users.CheckPassword(username, password) {
 			http.Error(w, "authentication failed", http.StatusForbidden)
+			dblock.RUnlock()
 			return
 		}
 	} else {
@@ -225,11 +261,18 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Block when we are reloading things.
+	dblock.RLock()
+
 	// Validate hostname access in users database.
 	if !hosts.CheckUser(hostname, username) {
 		http.Error(w, "access denied", http.StatusForbidden)
+		dblock.RUnlock()
 		return
 	}
+
+	// Releas lock.
+	dblock.RUnlock()
 
 	// Prepare and encode token.
 	data := &TokenData{

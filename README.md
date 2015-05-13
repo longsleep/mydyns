@@ -89,6 +89,10 @@ $ ./mydynsd \
 	--ttl=60
 ```
 
+While the server is running, you can send the USR1 signal, to make it reload
+the database files for users, hosts and security. All other changes require
+a full restart.
+
 ## HTTP API
 
 The server provides HTTP API endpoints.
