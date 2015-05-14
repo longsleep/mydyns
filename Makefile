@@ -1,5 +1,5 @@
 
-PKG := mydyns
+PKG := mydynsd
 EXENAME := mydynsd
 
 GOPATH = "$(CURDIR)/vendor:$(CURDIR)"
