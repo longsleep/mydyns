@@ -115,7 +115,7 @@ func main() {
 
 	// Create reload listener.
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGUSR1)
+	signal.Notify(sigc, syscall.SIGHUP)
 	go func() {
 		for {
 			// Block for signal.
