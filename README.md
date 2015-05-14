@@ -69,10 +69,16 @@ to your DNS zone, and use the private key file when starting `mydynsd`.
 
 ## Tokens
 
-Mydyns usess token to authenticate update requests for hosts. The token
-contains the user created the token and the host the token should update. To
-ensure that the token cannot be modified, it is digitaly signed. The signing
-key is passed as file on `mydynsd` startup via the `--secret` parameter.
+Mydyns usess tokens to authenticate /update requests for hosts. The token
+contains a HMAC of the user and the host. The secret for creating the HMAC is
+is read from a file passed via the `--secret` parameter. You shoud generate
+the file with some random data.
+
+```bash
+$ dd if=/dev/urandom of=secret.key bs=1 count=32
+```
+
+The length of the key should be 32 or 64 bytes.
 
 ## Startup
 
@@ -84,30 +90,32 @@ $ ./mydynsd \
 	--users=users.db \
 	--hosts=hosts.db \
 	--security=security.db \
-	--secret=secret.dat \
+	--secret=secret.key \
 	--listen=127.0.0.1:8040 \
 	--ttl=60
 ```
 
-While the server is running, you can send the HUP signal, to make it reload
-the database files for users, hosts and security. All other changes require
-a full restart.
+While the server is running, you can send the HUP signal to make it reload the
+database files for users, hosts and security. All other changes require a full
+restart.
 
 ## HTTP API
 
-The server provides HTTP API endpoints.
+The server provides HTTP API end points.
 
-### Token
+### /token
 
 First one is /token which is used to generate a update token for a host. The
-/token end point requires HTTP Basic authentication which provides the user
-and password. When successfull the token is returned.
+/token end point requires HTTP Basic authentication to provide the user and
+password. When successfully authenticated and the user is listed in the hosts
+database for the provides hostname, the token is returned. This tokenvalue can
+then be used to use /update that hostname.
 
 ```bash
 $ curl -u user:password https://yourserver/token?hostname=myhost
 ```
 
-### Update
+### /update
 
 To send an update request use /update end point with the `token` parameter.
 When no further parameters are passed, it will set the IP address where the
@@ -121,7 +129,8 @@ $ curl https://yourserver/update?token=tokenvalue
 ```
 
 There is a update script example in the `scripts` directory which you can
-use to run from cron or similar.
+use to run from cron or similar. Also check the `extra` directory for some
+ideas to run the daemon as an upstart service.
 
 --
 Simon Eisenmann - mailto:simon@longsleep.org
