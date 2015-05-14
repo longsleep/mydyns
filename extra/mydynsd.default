@@ -1,0 +1,24 @@
+# Configure your DNS server host name including the DNS zone where dynamic
+# hosts should be added to.
+DNS_SERVER=localhost
+DNS_ZONE=localdomain
+
+# Full path to dnssec key (.private) to use. The public .key file must also
+# be in the same directory as the file specified here. The key must be valid
+# to apply updates on the DNS server zone specified above.
+DNSSEC_KEY=/etc/mydns/localdomain.private
+
+# The time in seconds until dynamic addresses expire from cache. Should be as
+# low as possible to allow changes to propagate quickly. Recommended value is
+# 60.
+TTL=60
+
+LOG=/var/log/mydynsd.log
+
+DB_USERS=/etc/mydyns/users.db
+DB_HOSTS=/etc/mydyns/hosts.db
+DB_SECURITY=/etc/mydyns/security.db
+SECRET_KEY=/etc/mydyns/secret.key
+
+# The server will bind the HTTP API to this address. Format is IP:PORT.
+LISTEN=127.0.0.1:38040

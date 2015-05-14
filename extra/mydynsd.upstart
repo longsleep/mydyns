@@ -1,0 +1,16 @@
+description "Job that runs the mydyns daemon"
+
+start on runlevel [2345]
+
+stop on runlevel [016]
+
+env config=/etc/default/mydynsd
+
+pre-start script
+[ -e "$config" ] || { stop; exit 0; }
+end script
+
+script
+. $config
+exec /usr/bin/mydynsd --server="$DNS_SERVER" --key="$DNSSEC_KEY" --zone="$DNS_ZONE" --users="$DB_USERS" --hosts="$DB_HOSTS" --security="$DB_SECURITY" --secret="$SECRET_KEY" --listen="$LISTEN" --ttl="$TTL" --log="$LOG"
+end script
