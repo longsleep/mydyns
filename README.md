@@ -1,12 +1,20 @@
 Mydyns
 ==========
 
-Mydyns implements a HTTP API to update a dynamic DNS zone by dynamically
-adding or removing A and AAAA records from a zone.
+Mydyns implements a HTTP API to update a dynamic DNS zone by  adding or
+removing A and AAAA records from a DNS zone. Mydyns uses the `nsupdate`
+utility to submit Dynamic DNS Update requests as defined in RFC 2136 to a name
+server.
 
 ## Build requirements
 
   - [Go](http://golang.org) >= 1.1.0
+
+
+## Runtime requirements
+
+  - nsupdate (Found in dnsutils provided with BIND)
+
 
 ## Building
 
@@ -67,6 +75,7 @@ $ dnssec-keygen -a HMAC-MD5 -b 512 -n HOST your.dns.zone
 This creates a public and private key. Add the public key to to allow updates
 to your DNS zone, and use the private key file when starting `mydynsd`.
 
+
 ## Tokens
 
 Mydyns usess tokens to authenticate /update requests for hosts. The token
@@ -79,6 +88,7 @@ $ dd if=/dev/urandom of=secret.key bs=1 count=32
 ```
 
 The length of the key should be 32 or 64 bytes.
+
 
 ## Startup
 
@@ -131,6 +141,25 @@ $ curl https://yourserver/update?token=tokenvalue
 There is a update script example in the `scripts` directory which you can
 use to run from cron or similar. Also check the `extra` directory for some
 ideas to run the daemon as an upstart service.
+
+
+## Expose service to the Internet
+
+Mydyns runs on the local interface by default. If you want to expose the
+service to the public internet you should run it behind a transparent proxy
+like Nginx to provide TLS encryption. For auto detection of the remote IP
+addresses to work, make sure that the proxy injects the remote IP address as
+`X-Real-IP` HTTP request header.
+
+### Nginx example
+
+```
+location ~* /(token|update)$ {
+	proxy_pass http://127.0.0.1:38040;
+	proxy_set_header Host $http_host;
+	proxy_set_header X-Real-IP $remote_addr;
+}
+```
 
 --
 Simon Eisenmann - mailto:simon@longsleep.org
