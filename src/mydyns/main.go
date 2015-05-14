@@ -83,11 +83,22 @@ func main() {
 		hostsfile    = kingpin.Flag("hosts", "Hosts database.").Required().PlaceHolder("HOSTSFILE").ExistingFile()
 		secretfile   = kingpin.Flag("secret", "Auth token secret file.").Required().ExistingFile()
 		securityfile = kingpin.Flag("security", "Security secret database.").Required().ExistingFile()
+		logfile      = kingpin.Flag("log", "Log file.").String()
 	)
 
 	kingpin.CommandLine.Help = "Manage your own dynamic DNS zone."
 	kingpin.Version(version)
 	kingpin.Parse()
+
+	// First things first, open up log.
+	if *logfile != "" {
+		if f, err := os.OpenFile(*logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666); err == nil {
+			defer f.Close()
+			log.SetOutput(f)
+		} else {
+			log.Fatalf("error opening log file: %v", err)
+		}
+	}
 
 	log.Printf("Starting up on: %s\n", *listen)
 
