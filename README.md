@@ -69,7 +69,7 @@ and that means you need to generate a dnssec key which is used to connect to
 the DNS server and allows the update.
 
 ```bash
-$ dnssec-keygen -a HMAC-MD5 -b 512 -n HOST your.dns.zone
+$ dnssec-keygen -a HMAC-SHA256 -b 256 -n HOST your.dns.zone
 ```
 
 This creates a public and private key. Add the public key to to allow updates
