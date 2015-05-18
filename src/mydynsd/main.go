@@ -198,7 +198,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	if myip == "" || myip == "auto" {
 		myip = strings.SplitN(r.RemoteAddr, ":", 2)[0]
 		ip = net.ParseIP(myip)
-		if ip.IsLoopback() {
+		if ip.IsLoopback() || isPrivateNetwork(ip) {
 			// Running through a proxy?
 			myip = r.Header.Get("X-Real-IP")
 			if myip != "" {
