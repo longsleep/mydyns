@@ -173,6 +173,7 @@ utility. As the image is minimal, it is using a static build of mydynsd to
 avoid system dependencies.
 
 ```bash
+$ make binarystatic
 $ sudo docker build -t longsleep/mydynsd -f Dockerfile .
 ```
 
@@ -185,7 +186,7 @@ parameters to your files as they are location /data in the container. Create
 all the files before running the container for the first time.
 
 ```bash
-$ sudo docker run -d=true -p=127.0.0.1:8040:8040 -v=/mnt/mydyns:/data --sig-proxy=true longsleep/mydynsd /app/mydynsd --server=your.name.server --key=/data/dnssec.key.private --zone=your.dns.zone --users=/data/users.db --hosts=/data/hosts.db --security=/data/security.db --secret=/data/secret.key --listen=0.0.0.0:8040 --ttl=60 --log=/data/mydynsd.log
+$ sudo docker run -d=true -p=127.0.0.1:8040:8040 -v=/mnt/mydyns:/data --sig-proxy=true -it longsleep/mydynsd /app/mydynsd --server=your.name.server --key=/data/dnssec.key.private --zone=your.dns.zone --users=/data/users.db --hosts=/data/hosts.db --security=/data/security.db --secret=/data/secret.key --listen=0.0.0.0:8040 --ttl=60 --log=/data/mydynsd.log
 ```
 
 From now on when you start/stop the Docker container, you should use the
