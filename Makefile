@@ -29,6 +29,9 @@ binary:
 binaryrace:
 		GOPATH=$(GOPATH) go build -race -o $(OUTPUT)/$(EXENAME) -ldflags '$(LDFLAGS)' $(PKG)
 
+binarystatic:
+		GOPATH=$(GOPATH) CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o $(OUTPUT)/$(EXENAME).static $(PKG)
+
 fmt:
 		GOPATH=$(GOPATH) go fmt $(PKG)/...
 

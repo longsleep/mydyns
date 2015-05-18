@@ -161,5 +161,39 @@ location ~* /(token|update)$ {
 }
 ```
 
+## Docker
+
+The Dockerfile can be used to build a docker images to run mydynsd in a
+container.
+
+### Building Docker container
+
+Running this will build you a minimal docker image including the nsupdate
+utility. As the image is minimal, it is using a static build of mydynsd to
+avoid system dependencies.
+
+```bash
+$ sudo docker build -t longsleep/mydynsd -f Dockerfile .
+```
+
+### Running Docker container
+
+Running the first time will set up the location of the configuration and the
+port of your choice. Make sure to put all the configration files and keys into
+a single folder and mount this folder as /data into Docker. Pass all the
+parameters to your files as they are location /data in the container. Create
+all the files before running the container for the first time.
+
+```bash
+$ sudo docker run -d=true -p=127.0.0.1:8040:8040 -v=/mnt/mydyns:/data --sig-proxy=true longsleep/mydynsd /app/mydynsd --server=your.name.server --key=/data/dnssec.key.private --zone=your.dns.zone --users=/data/users.db --hosts=/data/hosts.db --security=/data/security.db --secret=/data/secret.key --listen=0.0.0.0:8040 --ttl=60 --log=/data/mydynsd.log
+```
+
+From now on when you start/stop the Docker container, you should use the
+container id with the following commands. To get the container id after the
+initial run, type `sudo docker ps`.
+
+	sudo docker start <container-id>
+	sudo docker stop <container-id>
+
 --
 Simon Eisenmann - mailto:simon@longsleep.org
