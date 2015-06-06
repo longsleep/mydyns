@@ -155,7 +155,7 @@ addresses to work, make sure that the proxy injects the remote IP address as
 
 ```
 location ~* /(token|update)$ {
-	proxy_pass http://127.0.0.1:38040;
+	proxy_pass http://127.0.0.1:8040;
 	proxy_set_header Host $http_host;
 	proxy_set_header X-Real-IP $remote_addr;
 }
