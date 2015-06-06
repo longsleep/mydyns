@@ -9,4 +9,4 @@ EXPOSE 38040
 
 VOLUME ["/data"]
 
-CMD ["/app/mydynsd"]
+ENTRYPOINT ["/app/mydynsd"]

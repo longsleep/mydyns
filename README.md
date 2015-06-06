@@ -186,15 +186,15 @@ parameters to your files as they are location /data in the container. Create
 all the files before running the container for the first time.
 
 ```bash
-$ sudo docker run -d=true -p=127.0.0.1:8040:8040 -v=/mnt/mydyns:/data --sig-proxy=true -it longsleep/mydynsd /app/mydynsd --server=your.name.server --key=/data/dnssec.key.private --zone=your.dns.zone --users=/data/users.db --hosts=/data/hosts.db --security=/data/security.db --secret=/data/secret.key --listen=0.0.0.0:8040 --ttl=60 --log=/data/mydynsd.log
+$ sudo docker run --rm=true -p=127.0.0.1:8040:8040 -v=/mnt/mydyns:/data --sig-proxy=true -it longsleep/mydynsd /app/mydynsd --server=your.name.server --key=/data/dnssec.key.private --zone=your.dns.zone --users=/data/users.db --hosts=/data/hosts.db --security=/data/security.db --secret=/data/secret.key --listen=0.0.0.0:8040 --ttl=60 --log=/data/mydynsd.log
 ```
 
-From now on when you start/stop the Docker container, you should use the
-container id with the following commands. To get the container id after the
-initial run, type `sudo docker ps`.
+This runs a Mydyns in a temporary container in foreground. To stop it,
+just press CTRL+C. To run the container as system service, check out the
+upstart example in `extras/mydynsd-container.upstart`. When running properly
+with upstart, doing a `reload mydynsd-container` will reload the databases,
+without interrupting the service.
 
-	sudo docker start <container-id>
-	sudo docker stop <container-id>
 
 --
 Simon Eisenmann - mailto:simon@longsleep.org

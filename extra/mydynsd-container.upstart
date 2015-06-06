@@ -1,10 +1,24 @@
 description "Mydyns container"
 
-start on filesystem and started docker.io
-stop on runlevel [!2345]
+start on filesystem and started docker
+stop on stopping docker
 respawn
 
 script
-  /usr/bin/docker start -a <container-id>
+exec docker run \
+	--rm=true \
+	-p=127.0.0.1:8040:8040 \
+	-v=/mnt/mydyns:/data \
+	longsleep/mydynsd \
+	--server=your.name.server \
+	--key=/data/dnssec.key.private \
+	--zone=your.dns.zone \
+	--users=/data/users.db \
+	--hosts=/data/hosts.db \
+	--security=/data/security.db \
+	--secret=/data/secret.key \
+	--listen=0.0.0.0:8040 \
+	--ttl=60 \
+	--log=/data/mydynsd.log
 end script
 
