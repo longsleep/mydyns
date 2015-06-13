@@ -37,8 +37,10 @@ func NewSecretFile(fn string) (*SecretFile, error) {
 	if len(secret) != 32 && len(secret) != 64 {
 		log.Printf("Warning: secret size should be 32 or 64 bytes but is %d bytes\n", len(secret))
 	}
+	generator := securecookie.New(secret, nil)
+	generator.MaxAge(0)
 	return &SecretFile{
-		generator: securecookie.New(secret, nil),
+		generator: generator,
 	}, nil
 }
 
