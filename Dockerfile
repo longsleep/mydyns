@@ -1,4 +1,4 @@
-FROM gliderlabs/alpine:3.1
+FROM alpine:latest
 
 RUN mkdir /app
 ADD bin/mydynsd.static /app/mydynsd
