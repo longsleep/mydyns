@@ -2,3 +2,4 @@ bin/
 vendor/
 *.db
 secret.dat
+*.docker
