@@ -1,0 +1,26 @@
+[Unit]
+Description=Mydynsd Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+ExecStart=/usr/bin/docker run \
+	--rm=true \
+	-p=127.0.0.1:8040:8040 \
+	-v=/mnt/mydyns:/data \
+	longsleep/mydynsd \
+	--server=your.name.server \
+	--key=/data/dnssec.key.private \
+	--zone=your.dns.zone \
+	--users=/data/users.db \
+	--hosts=/data/hosts.db \
+	--security=/data/security.db \
+	--secret=/data/secret.key \
+	--listen=0.0.0.0:8040 \
+	--ttl=60 \
+	--log=/data/mydynsd.log
+
+[Install]
+WantedBy=multi-user.target
