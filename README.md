@@ -8,7 +8,7 @@ server.
 
 ## Build requirements
 
-  - [Go](http://golang.org) >= 1.1.0
+  - [Go](http://golang.org) >= 1.13
 
 
 ## Runtime requirements
