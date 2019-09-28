@@ -173,7 +173,6 @@ utility. As the image is minimal, it is using a static build of `mydynsd` to
 avoid system dependencies.
 
 ```bash
-$ make binarystatic
 $ sudo docker build -t longsleep/mydynsd -f Dockerfile .
 ```
 

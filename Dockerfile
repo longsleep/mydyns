@@ -1,9 +1,14 @@
-FROM alpine:latest
+FROM golang:1.13-buster
 
-RUN mkdir /app
-ADD bin/mydynsd.static /app/mydynsd
+WORKDIR /go/src/github.com/longsleep/mydyns
+COPY . .
+RUN make binarystatic
 
-RUN apk --update add bind-tools
+FROM alpine:3.10.2
+RUN apk --no-cache add bind-tools
+
+WORKDIR /app
+COPY --from=0 /go/src/github.com/longsleep/mydyns/bin/mydynsd.static /app/mydynsd
 
 EXPOSE 38040
 
