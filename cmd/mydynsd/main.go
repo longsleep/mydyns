@@ -223,7 +223,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Queue changes.
-	if err := update.update(&nsUpdateData{data.Host, ip}); err != nil {
+	if err := update.update(&nsUpdateData{data.Host, &ip}); err != nil {
 		log.Println("Update failed", err)
 		http.Error(w, fmt.Sprintf("update failed: %s", err), http.StatusTeapot)
 	} else {
