@@ -34,7 +34,7 @@ import (
 
 type nsUpdateData struct {
 	hostname string
-	ip       net.IP
+	ip       *net.IP
 }
 
 type NsUpdate struct {
@@ -61,7 +61,7 @@ func NewNsUpdate(exe, server, keyfile, zone string, ttl int) *NsUpdate {
 }
 
 func (update *NsUpdate) run() {
-	work := make(map[string]net.IP)
+	work := make(map[string]*net.IP)
 	var err error
 	c := time.Tick(5 * time.Second)
 	for {
@@ -72,13 +72,13 @@ func (update *NsUpdate) run() {
 				select {
 				case data := <-update.queue:
 					var t string
-					if len(data.ip) == net.IPv4len {
-						t = ",v4"
+					if data.ip.To4() != nil {
+						t = "v4"
 					} else {
-						t = ",v6"
+						t = "v6"
 					}
 					log.Println("Processing update", data.hostname, data.ip, t)
-					work[data.hostname+t] = data.ip
+					work[data.hostname+" "+t] = data.ip
 				default:
 					// No data available. Non blocking.
 					break Work
@@ -91,7 +91,7 @@ func (update *NsUpdate) run() {
 					// Error.
 					log.Println("Update failed", err)
 				} else {
-					work = make(map[string]net.IP)
+					work = make(map[string]*net.IP)
 				}
 			}
 		case <-update.exit:
@@ -100,7 +100,7 @@ func (update *NsUpdate) run() {
 	}
 }
 
-func (update *NsUpdate) process(work map[string]net.IP) error {
+func (update *NsUpdate) process(work map[string]*net.IP) error {
 
 	f, err := ioutil.TempFile(os.TempDir(), "mydyns")
 	if err != nil {
