@@ -29,6 +29,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -115,6 +116,7 @@ func (update *NsUpdate) process(work map[string]*net.IP) error {
 
 	var recordtype string
 	for hostname, ip := range work {
+		hostname = strings.SplitN(hostname, " ", 2)[0]
 		if ip.To4() != nil {
 			recordtype = "A"
 		} else {
@@ -133,9 +135,10 @@ func (update *NsUpdate) process(work map[string]*net.IP) error {
 	cmd := exec.Command(update.exe, "-k", update.keyfile, f.Name())
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = &out
 	err = cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s", err, out.String())
 	}
 	log.Println("Completed update", f.Name())
 	return nil
