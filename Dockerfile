@@ -1,10 +1,10 @@
-FROM golang:1.15-buster
+FROM golang:1.22-alpine3.19
 
 WORKDIR /go/src/github.com/longsleep/mydyns
 COPY . .
 RUN make binary
 
-FROM alpine:3.12.0
+FROM alpine:3.19
 RUN apk --no-cache add bind-tools
 
 WORKDIR /app
