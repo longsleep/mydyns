@@ -22,6 +22,7 @@ package main
 import (
 	"crypto/sha1"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/csv"
 	"hash"
 	"log"
@@ -87,5 +88,8 @@ func (ht *HtpasswdFile) CheckPassword(user, password string) bool {
 	}
 
 	digest.Write([]byte(password))
-	return subtle.ConstantTimeCompare([]byte(parsed[2]), digest.Sum(nil)) == 1
+
+	parsed_bytes, _ := base64.StdEncoding.DecodeString(parsed[2])
+
+	return subtle.ConstantTimeCompare(parsed_bytes, digest.Sum(nil)) == 1
 }
